@@ -15,6 +15,8 @@ authors = [
 keywords = ["compiler", "api", "django", "schema", "dsl"]
 dependencies = [
     "click>=8.1.0",
+    "django>=4.2",
+    "djangorestframework>=3.14",
 ]
 
 [project.optional-dependencies]
