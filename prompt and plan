@@ -1,0 +1,1139 @@
+The key rule:
+
+> Every phase must leave the project in a runnable, testable state.
+
+And:
+
+> At the end of every phase, Antigravity must tell me exactly what commands to run, what output I should expect, and what success looks like.
+
+# MASTER BUILD INSTRUCTION
+
+You are acting as:
+
+* Senior Compiler Engineer
+* Senior Backend Engineer
+* Technical Lead
+* Software Architect
+* Mentor
+
+Your task is NOT to build APIForge all at once.
+
+Your task is to teach and build APIForge incrementally.
+
+IMPORTANT:
+
+Treat this exactly like an experienced engineer mentoring a junior developer.
+
+Never build large amounts of infrastructure before there is a working feature.
+
+Every phase must:
+
+1. Build something runnable.
+2. Build something testable.
+3. Leave the project in a working state.
+4. Explain exactly what was built.
+5. Explain why it was built.
+6. Explain why this phase exists.
+7. Explain what limitations currently exist.
+8. Explain what future phases will improve.
+
+After every phase create:
+
+docs/
+
+BUILD_LOG.md
+PHASE_SUMMARY.md
+
+For every phase produce:
+
+# What We Built
+
+# Why We Built It
+
+# Files Created
+
+# Files Modified
+
+# Commands To Run
+
+# Expected Output
+
+# Manual Test Procedure
+
+# Success Criteria
+
+# Known Limitations
+
+# Next Phase Preview
+
+DO NOT move to advanced compiler concepts until they are needed.
+
+Build vertically.
+
+Working software first.
+Architecture second.
+
+At the end of every phase I must be able to run commands and verify the feature myself.
+
+Never continue automatically to the next phase.
+
+Stop after completing the current phase and wait for approval.
+
+---
+
+# Phase 0
+PHASE 0 — PROJECT BOOTSTRAP
+
+Goal:
+
+Create the smallest possible APIForge project.
+
+Requirements:
+
+Create:
+
+apiforge/
+├── cli/
+├── compiler/
+├── docs/
+├── examples/
+├── tests/
+
+Implement:
+
+apiforge --help
+
+Requirements:
+
+* CLI must execute successfully.
+* Project structure must be clean.
+* No compiler functionality yet.
+
+Documentation Required:
+
+BUILD_LOG.md
+PHASE_SUMMARY.md
+
+At the end tell me:
+
+1. Exactly what files were created.
+2. Exactly what commands to run.
+3. What output I should see.
+4. How I verify success.
+
+Do not start Phase 1.
+Stop after Phase 0.
+
+---
+
+# Phase 1
+
+PHASE 1 — PARSE A SINGLE RESOURCE
+
+Goal:
+
+Read a .api file and display its contents.
+
+Support only:
+
+resource Product {
+name string
+}
+
+No lexer.
+
+No AST.
+
+No compiler.
+
+Regex parsing is acceptable.
+
+Command:
+
+apiforge parse examples/product.api
+
+Expected output:
+
+{
+"resource": "Product",
+"fields": [
+{
+"name": "name",
+"type": "string"
+}
+]
+}
+
+At the end provide:
+
+* Files created
+* Files modified
+* Commands to run
+* Expected output
+* Manual test procedure
+
+Update documentation.
+
+Do not start Phase 2.
+
+---
+
+# Phase 2
+
+PHASE 2 — GENERATE A DJANGO MODEL
+
+Goal:
+
+Generate a working models.py file.
+
+Input:
+
+resource Product {
+name string
+}
+
+Command:
+
+apiforge generate examples/product.api
+
+Output:
+
+generated/
+└── models.py
+
+containing:
+
+class Product(models.Model):
+name = models.CharField(...)
+
+Only support:
+
+string
+
+No serializers.
+
+No views.
+
+No CRUD.
+
+At the end explain:
+
+What was generated.
+How generation works.
+How to inspect generated code.
+How to verify success.
+
+Stop after Phase 2.
+
+---
+
+# Phase 3
+
+PHASE 3 — GENERATE A RUNNING DJANGO APP
+
+Goal:
+
+Generate:
+
+models.py
+serializers.py
+views.py
+urls.py
+
+for one resource.
+
+After generation:
+
+I should be able to start Django and access CRUD endpoints.
+
+At the end provide:
+
+Step-by-step commands.
+
+Expected API routes.
+
+Example requests.
+
+Example responses.
+
+Manual testing instructions.
+
+Stop after Phase 3.
+
+---
+
+# Phase 4
+
+PHASE 4 — SUPPORT MORE FIELD TYPES
+
+Add support for:
+
+string
+integer
+decimal
+boolean
+email
+
+Provide examples.
+
+Provide generated Django output.
+
+Provide testing instructions.
+
+Stop after Phase 4.
+
+---
+
+# Phase 5
+
+PHASE 5 — REPLACE SIMPLE PARSER WITH REAL COMPILER COMPONENTS
+
+Goal:
+
+Refactor.
+
+Introduce:
+
+* Lexer
+* Tokens
+* Parser
+* AST
+
+without changing existing functionality.
+
+This phase is intentionally a refactor.
+
+The generated Django code should still work exactly as before.
+
+Explain:
+
+Why regex parsing became insufficient.
+
+What benefits AST provides.
+
+How to inspect generated AST.
+
+Provide commands for testing.
+
+Stop after Phase 5.
+
+---
+
+# Phase 6
+
+PHASE 6 — SEMANTIC VALIDATION
+
+Goal:
+
+Detect mistakes.
+
+Example:
+
+resource Product {
+name strng
+}
+
+Should produce:
+
+Unknown type 'strng'
+
+Provide:
+
+Valid examples.
+Invalid examples.
+Expected errors.
+
+Provide testing instructions.
+
+Stop after Phase 6.
+
+---
+
+# Phase 7
+
+PHASE 7 — RESOURCE RELATIONSHIPS
+
+Add:
+
+belongs_to
+
+Example:
+
+resource Customer {
+name string
+}
+
+resource Order {
+customer belongs_to Customer
+}
+
+Generate:
+
+ForeignKey relationships.
+
+Provide:
+
+Generated code.
+Commands.
+Testing steps.
+
+Stop after Phase 7.
+
+---
+
+# Phase 8
+
+PHASE 8 — SCHEMA SNAPSHOTS
+
+Goal:
+
+Save compilation state.
+
+Store:
+
+Current schema snapshot.
+
+Allow:
+
+apiforge snapshot
+
+to display stored schema.
+
+Provide:
+
+Testing instructions.
+
+Expected output.
+
+Stop after Phase 8.
+
+---
+
+# Phase 9
+
+PHASE 9 — DIFF ENGINE
+
+Goal:
+
+Compare:
+
+Previous snapshot
+
+vs
+
+Current snapshot
+
+Detect:
+
+Added resource
+Removed resource
+Added field
+Removed field
+
+Provide:
+
+apiforge diff
+
+command.
+
+Provide:
+
+Sample inputs.
+Expected outputs.
+Testing instructions.
+
+Stop after Phase 9.
+
+---
+
+# Phase 10
+
+PHASE 10 — MIGRATION PLANNER
+
+Goal:
+
+Convert diffs into migration plans.
+
+Example:
+
+Added field
+
+→
+
+AddField migration
+
+Provide:
+
+Migration plan output.
+
+Testing instructions.
+
+Expected behavior.
+
+Stop after Phase 10.
+
+---
+
+# Phase 11
+
+PHASE 11 — WATCH MODE
+
+Goal:
+
+apiforge watch example.api
+
+Detect changes automatically.
+
+Recompile automatically.
+
+Display diffs automatically.
+
+Provide:
+
+Step-by-step testing guide.
+
+Expected terminal output.
+
+Stop after Phase 11.
+
+---
+
+# Phase 12
+
+PHASE 12 — FINAL POLISH
+
+Goal:
+
+Prepare for GitHub and interviews.
+
+Generate:
+
+README
+Architecture diagrams
+Resume bullets
+Interview questions
+Project defense guide
+
+Provide:
+
+Full project walkthrough.
+
+Explain the evolution from:
+
+Simple parser
+
+to
+
+Incremental schema compiler.
+
+Stop.
+
+
+
+# Phase 0 — Project Bootstrap
+
+## Motivation
+
+Before building a compiler, we need a proper project.
+
+Equivalent of:
+
+```bash
+django-admin startproject
+```
+
+for Django.
+
+---
+
+## What We Build
+
+* Project structure
+* CLI entrypoint
+* Build logs
+* Documentation system
+
+---
+
+## Deliverables
+
+```text
+apiforge/
+├── cli/
+├── compiler/
+├── docs/
+├── tests/
+├── examples/
+```
+
+Working command:
+
+```bash
+apiforge --help
+```
+
+---
+
+## Result
+
+You have a real project repository.
+
+---
+
+# Phase 1 — Read API Specification Files
+
+## Motivation
+
+The compiler must understand user input.
+
+Before generating anything we need:
+
+```text
+.api file
+ ↓
+Python object
+```
+
+---
+
+## What We Build
+
+Support:
+
+```dsl
+resource Product {
+    name string
+}
+```
+
+Simple parsing.
+
+No AST yet.
+
+---
+
+## Deliverables
+
+Command:
+
+```bash
+apiforge parse product.api
+```
+
+Output:
+
+```json
+{
+  "resource": "Product",
+  "fields": [
+    {
+      "name": "name",
+      "type": "string"
+    }
+  ]
+}
+```
+
+---
+
+## Result
+
+APIForge can now read DSL files.
+
+---
+
+# Phase 2 — Generate Django Models
+
+## Motivation
+
+We want the first useful output.
+
+A compiler that generates nothing is useless.
+
+---
+
+## What We Build
+
+Convert:
+
+```dsl
+resource Product {
+    name string
+}
+```
+
+into:
+
+```python
+class Product(models.Model):
+    name = models.CharField(...)
+```
+
+---
+
+## Deliverables
+
+Command:
+
+```bash
+apiforge generate product.api
+```
+
+Output:
+
+```text
+generated/
+└── models.py
+```
+
+---
+
+## Result
+
+You have your first code generation feature.
+
+---
+
+# Phase 3 — Generate CRUD APIs
+
+## Motivation
+
+Models alone aren't useful.
+
+Developers want endpoints.
+
+---
+
+## What We Build
+
+Generate:
+
+```text
+models.py
+serializers.py
+views.py
+urls.py
+```
+
+---
+
+## Deliverables
+
+Endpoints:
+
+```http
+GET /products
+
+POST /products
+
+GET /products/1
+
+PUT /products/1
+
+DELETE /products/1
+```
+
+---
+
+## Result
+
+You have a functioning Django REST backend.
+
+This is the first impressive milestone.
+
+---
+
+# Phase 4 — More Field Types
+
+## Motivation
+
+Real APIs need more than strings.
+
+---
+
+## What We Build
+
+Support:
+
+```dsl
+string
+integer
+decimal
+boolean
+email
+```
+
+---
+
+## Deliverables
+
+Example:
+
+```dsl
+resource Product {
+    name string
+    stock integer
+    price decimal
+}
+```
+
+---
+
+## Result
+
+Users can model real business entities.
+
+---
+
+# Phase 5 — Real Compiler Refactor
+
+## Motivation
+
+The parser is becoming messy.
+
+Regexes no longer scale.
+
+Now compiler concepts become necessary.
+
+---
+
+## What We Build
+
+* Lexer
+* Tokens
+* Parser
+* AST
+
+---
+
+## Deliverables
+
+New pipeline:
+
+```text
+.api
+ ↓
+Lexer
+ ↓
+Tokens
+ ↓
+Parser
+ ↓
+AST
+```
+
+---
+
+## Result
+
+APIForge becomes a real compiler.
+
+---
+
+# Phase 6 — Semantic Validation
+
+## Motivation
+
+Bad DSL should fail early.
+
+---
+
+## What We Build
+
+Validation:
+
+```dsl
+name strng
+```
+
+becomes:
+
+```text
+Unknown type 'strng'
+Did you mean 'string'?
+```
+
+---
+
+## Deliverables
+
+Compiler diagnostics.
+
+---
+
+## Result
+
+Compiler catches mistakes.
+
+---
+
+# Phase 7 — Relationships
+
+## Motivation
+
+Real systems are connected.
+
+---
+
+## What We Build
+
+Support:
+
+```dsl
+resource Order {
+    customer belongs_to Customer
+}
+```
+
+---
+
+## Deliverables
+
+Generated:
+
+```python
+customer = models.ForeignKey(...)
+```
+
+---
+
+## Result
+
+Users can build realistic systems.
+
+---
+
+# Phase 8 — Snapshots
+
+## Motivation
+
+We want to remember previous compilations.
+
+Currently compiler forgets everything.
+
+---
+
+## What We Build
+
+Store:
+
+```text
+Previous Schema
+```
+
+after generation.
+
+---
+
+## Deliverables
+
+```bash
+apiforge snapshot
+```
+
+---
+
+## Result
+
+Compiler now has memory.
+
+---
+
+# Phase 9 — Diff Engine
+
+## Motivation
+
+This is the project's first truly unique feature.
+
+---
+
+## What We Build
+
+Compare:
+
+```text
+Old Schema
+```
+
+vs
+
+```text
+New Schema
+```
+
+---
+
+## Deliverables
+
+Output:
+
+```text
+Added field:
+Product.stock
+
+Removed field:
+Product.price
+```
+
+---
+
+## Result
+
+Compiler understands change.
+
+---
+
+# Phase 10 — Migration Planner
+
+## Motivation
+
+Diffs alone are not enough.
+
+Developers need action plans.
+
+---
+
+## What We Build
+
+Convert:
+
+```text
+Added field
+```
+
+into:
+
+```python
+AddField(...)
+```
+
+Convert:
+
+```text
+Rename field
+```
+
+into:
+
+```python
+RenameField(...)
+```
+
+---
+
+## Deliverables
+
+Migration plans.
+
+---
+
+## Result
+
+Compiler understands evolution.
+
+This is where the project becomes genuinely interesting.
+
+---
+
+# Phase 11 — Watch Mode
+
+## Motivation
+
+Make development feel live.
+
+---
+
+## What We Build
+
+```bash
+apiforge watch product.api
+```
+
+---
+
+## Deliverables
+
+On save:
+
+```text
+Recompiled
+
+Added field:
+stock
+
+Migration Plan:
+AddField(Product.stock)
+```
+
+---
+
+## Result
+
+The compiler becomes interactive.
+
+---
+
+# Phase 12 — Final Product Layer
+
+## Motivation
+
+Turn a technical project into a portfolio-quality project.
+
+---
+
+## What We Build
+
+* README
+* Architecture diagrams
+* Examples
+* Interview guide
+* Demo project
+* Resume bullets
+
+---
+
+## Deliverables
+
+A polished GitHub repository.
+
+---
+
+## Result
+
+You can now tell a coherent story:
+
+### Beginning
+
+```text
+Read API files
+↓
+Generate models
+↓
+Generate CRUD APIs
+```
+
+### Middle
+
+```text
+Lexer
+Parser
+AST
+Semantic Analysis
+```
+
+### Advanced
+
+```text
+Snapshots
+Diff Engine
+Migration Planner
+```
+
+### Final
+
+```text
+Live Incremental Compiler
+```
+
+That's a much better learning journey because **every phase adds one visible capability**, and by Phase 3 you already have something usable, instead of spending weeks building infrastructure before seeing any results.
+
