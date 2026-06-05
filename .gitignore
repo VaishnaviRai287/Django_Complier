@@ -30,3 +30,11 @@ generated/
 
 # Snapshots (will be managed by apiforge)
 .apiforge/
+
+
+# Project prompt and planning files
+prompt and plan
+prompt*
+plan*
+# Project documentation
+docs/
