@@ -35,3 +35,24 @@ def info():
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")
+
+
+@cli.command()
+@click.argument("file_path", type=click.Path(exists=True))
+def parse(file_path):
+    """Parse a .api file and display its contents as JSON.
+
+    FILE_PATH is the path to the .api specification file.
+
+    Example:
+
+        apiforge parse examples/product.api
+    """
+    from apiforge.compiler.parser import parse_to_json
+
+    try:
+        output = parse_to_json(file_path)
+        click.echo(output)
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
