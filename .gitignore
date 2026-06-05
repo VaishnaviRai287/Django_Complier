@@ -32,9 +32,8 @@ generated/
 .apiforge/
 
 
-# Project prompt and planning files
-prompt and plan
-prompt*
+# Project planning files
+plan
 plan*
 # Project documentation
 docs/
