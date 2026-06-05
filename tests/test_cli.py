@@ -62,4 +62,4 @@ class TestCLIInfo:
     def test_info_shows_phase(self):
         runner = CliRunner()
         result = runner.invoke(cli, ["info"])
-        assert "Phase: 0" in result.output
+        assert "Phase: 1" in result.output

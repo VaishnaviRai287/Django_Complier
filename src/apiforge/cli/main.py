@@ -31,7 +31,7 @@ def cli():
 def info():
     """Display project information and current build phase."""
     click.echo(f"APIForge v{__version__}")
-    click.echo(f"Phase: 0 — Project Bootstrap")
+    click.echo(f"Phase: 1 — Parse a Single Resource")
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")

@@ -20,8 +20,24 @@
 
 ---
 
-## Phase 1 — Parse a Single Resource ⏳
+## Phase 1 — Parse a Single Resource ✅
 
 **Goal:** Read a `.api` file and display its contents as JSON.
 
-**Status:** In progress
+**Delivered:**
+- Regex-based parser in `apiforge.compiler.parser`
+- `apiforge parse <file_path>` command outputs clean parsed JSON representation
+- Input validation for `.api` extension and basic syntax matching
+- 8 new unit/integration tests added (16 total tests passing)
+
+**Architecture:** Custom domain-specific language (DSL) matching, regex module (`re`), click argument validation.
+
+**Limitations:** Only supports `string` fields, only one resource definition per file, no custom error reporting line numbers, basic syntax error validation.
+
+---
+
+## Phase 2 — Generate a Django Model ⏳
+
+**Goal:** Convert parsed `.api` files into a Django model code (`models.py`).
+
+**Status:** Up next
