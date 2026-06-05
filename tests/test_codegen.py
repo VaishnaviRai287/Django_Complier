@@ -47,6 +47,41 @@ class TestGenerateDjangoComponents:
         code = generate_app_urls(mock_data)
         assert "router.register(r'products', ProductViewSet" in code
         assert "path('', include(router.urls))" in code
+    
+    def test_generates_all_supported_field_types(self):
+        """Should correctly translate all 5 primary DSL types to Django fields."""
+        parsed_data = {
+            "resource": "Customer",
+            "fields": [
+                {"name": "fullname", "type": "string"},
+                {"name": "age", "type": "integer"},
+                {"name": "balance", "type": "decimal"},
+                {"name": "is_active", "type": "boolean"},
+                {"name": "contact_email", "type": "email"},
+            ]
+        }
+
+        code = generate_django_model(parsed_data)
+
+        assert "fullname = models.CharField(max_length=255)" in code
+        assert "age = models.IntegerField()" in code
+        assert "balance = models.DecimalField(max_digits=10, decimal_places=2)" in code
+        assert "is_active = models.BooleanField(default=False)" in code
+        assert "contact_email = models.EmailField()" in code
+
+    def test_str_method_prefers_email_if_no_name(self):
+        """If there is no 'name' field, but there is an 'email', it should print it."""
+        parsed_data = {
+            "resource": "User",
+            "fields": [
+                {"name": "age", "type": "integer"},
+                {"name": "email", "type": "email"},
+            ]
+        }
+
+        code = generate_django_model(parsed_data)
+        assert "return str(self.email)" in code
+
 
 
 class TestWriteGeneratedProject:

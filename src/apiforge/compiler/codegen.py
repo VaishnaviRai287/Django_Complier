@@ -22,23 +22,44 @@ def generate_django_model(parsed_data: dict) -> str:
         f"class {resource_name}(models.Model):",
     ]
 
+    # Map DSL types to Django field declarations
+    type_map = {
+        "string": "models.CharField(max_length=255)",
+        "integer": "models.IntegerField()",
+        "decimal": "models.DecimalField(max_digits=10, decimal_places=2)",
+        "boolean": "models.BooleanField(default=False)",
+        "email": "models.EmailField()",
+    }
+
     for field in fields:
         name = field["name"]
         field_type = field["type"]
-        if field_type == "string":
-            django_field = "models.CharField(max_length=255)"
+
+        if field_type in type_map:
+            django_field = type_map[field_type]
         else:
             raise ValueError(f"Unsupported field type: '{field_type}'")
+
         lines.append(f"    {name} = {django_field}")
 
     lines.append("")
 
+    # Automatically choose the best __str__ field
+    # We prefer 'name', then 'email', then the first string field, defaulting to 'pk'
     str_field = "pk"
     field_names = [f["name"] for f in fields]
+    field_types = {f["name"]: f["type"] for f in fields}
+
     if "name" in field_names:
         str_field = "name"
-    elif field_names:
-        str_field = field_names[0]
+    elif "email" in field_names:
+        str_field = "email"
+    else:
+        # Fallback to the first string/email field
+        for name, ftype in field_types.items():
+            if ftype in ("string", "email"):
+                str_field = name
+                break
 
     lines.extend([
         "    def __str__(self):",

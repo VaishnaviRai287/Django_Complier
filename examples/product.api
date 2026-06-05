@@ -1,3 +1,7 @@
 resource Product {
     name string
+    price decimal
+    stock integer
+    is_active boolean
+    vendor_email email
 }
