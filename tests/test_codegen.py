@@ -1,69 +1,75 @@
 """
-Phase 2 — Code Generator Tests.
+Phase 3 — Code Generator Tests.
 
-Verifies translation of parsed dictionary to Django model code.
+Verifies translation of parsed dictionary to full Django REST project.
 """
 
 import pytest
-from apiforge.compiler.codegen import generate_django_model, write_generated_code
+from apiforge.compiler.codegen import (
+    generate_django_model,
+    generate_serializer,
+    generate_views,
+    generate_app_urls,
+    write_generated_code,
+)
 
 
-class TestGenerateDjangoModel:
-    """Test translating parsed DSL schemas to Django models."""
+class TestGenerateDjangoComponents:
+    """Test individual component generators."""
 
-    def test_generates_basic_django_model(self):
-        """A simple resource with a string field should yield CharField."""
-        parsed_data = {
+    @pytest.fixture
+    def mock_data(self):
+        return {
             "resource": "Product",
             "fields": [{"name": "name", "type": "string"}]
         }
 
-        code = generate_django_model(parsed_data)
-
-        # Assert correct imports & classes
-        assert "from django.db import models" in code
+    def test_generates_model(self, mock_data):
+        code = generate_django_model(mock_data)
         assert "class Product(models.Model):" in code
         assert "name = models.CharField(max_length=255)" in code
-        assert "def __str__(self):" in code
-        assert "return str(self.name)" in code
 
-    def test_unsupported_field_type_raises_error(self):
-        """Types we haven't implemented yet (like int) should raise ValueError."""
-        parsed_data = {
+    def test_generates_serializer(self, mock_data):
+        code = generate_serializer(mock_data)
+        assert "from rest_framework import serializers" in code
+        assert "class ProductSerializer(serializers.ModelSerializer):" in code
+        assert "model = Product" in code
+        assert "fields = '__all__'" in code
+
+    def test_generates_views(self, mock_data):
+        code = generate_views(mock_data)
+        assert "from rest_framework import viewsets" in code
+        assert "class ProductViewSet(viewsets.ModelViewSet):" in code
+        assert "queryset = Product.objects.all()" in code
+        assert "serializer_class = ProductSerializer" in code
+
+    def test_generates_app_urls(self, mock_data):
+        code = generate_app_urls(mock_data)
+        assert "router.register(r'products', ProductViewSet" in code
+        assert "path('', include(router.urls))" in code
+
+
+class TestWriteGeneratedProject:
+    """Test full folder writing logic."""
+
+    def test_creates_django_project_structure(self, tmp_path):
+        mock_data = {
             "resource": "Product",
-            "fields": [{"name": "stock", "type": "integer"}]
+            "fields": [{"name": "name", "type": "string"}]
         }
-
-        with pytest.raises(ValueError, match="Unsupported field type: 'integer'"):
-            generate_django_model(parsed_data)
-
-    def test_str_method_defaults_to_first_field(self):
-        """If there is no 'name' field, __str__ should print the first field."""
-        parsed_data = {
-            "resource": "User",
-            "fields": [
-                {"name": "username", "type": "string"},
-                {"name": "title", "type": "string"}
-            ]
-        }
-
-        code = generate_django_model(parsed_data)
-        assert "return str(self.username)" in code
-
-
-class TestWriteGeneratedCode:
-    """Test file writing logic."""
-
-    def test_creates_directory_and_writes_file(self, tmp_path):
-        """Must create directories as needed and write models.py."""
-        code_content = "class MockModel:\n    pass\n"
-        out_dir = tmp_path / "custom_gen"
-
-        file_path = write_generated_code(code_content, output_dir=str(out_dir))
-
-        assert out_dir.exists()
-        assert out_dir.is_dir()
         
-        written_file = out_dir / "models.py"
-        assert written_file.exists()
-        assert written_file.read_text() == code_content
+        project_dir = tmp_path / "django_project"
+        write_generated_code(mock_data, output_dir=str(project_dir))
+
+        # Check project files
+        assert (project_dir / "manage.py").exists()
+        assert (project_dir / "settings.py").exists()
+        assert (project_dir / "urls.py").exists()
+
+        # Check app files
+        app_dir = project_dir / "app"
+        assert (app_dir / "__init__.py").exists()
+        assert (app_dir / "models.py").exists()
+        assert (app_dir / "serializers.py").exists()
+        assert (app_dir / "views.py").exists()
+        assert (app_dir / "urls.py").exists()

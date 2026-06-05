@@ -31,7 +31,7 @@ def cli():
 def info():
     """Display project information and current build phase."""
     click.echo(f"APIForge v{__version__}")
-    click.echo(f"Phase: 2 — Generate a Django Model")
+    click.echo(f"Phase: 3 — Generate a Running Django App")
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")
@@ -82,13 +82,10 @@ def generate(file_path, output_dir):
         # 1. Parse the DSL file
         parsed = parse_api_file(file_path)
 
-        # 2. Generate the Python code string
-        code = generate_django_model(parsed)
-
-        # 3. Write it to models.py
-        written_path = write_generated_code(code, output_dir)
+        # 2. Write all project components to output directory
+        written_path = write_generated_code(parsed, output_dir)
         
-        click.echo(f"Successfully generated Django model at: {written_path}")
+        click.echo(f"Successfully generated Django app at: {written_path}")
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)

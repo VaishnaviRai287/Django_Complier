@@ -1,30 +1,20 @@
 """
-Phase 2 — Django Model Code Generator.
+Phase 3 — Django App Code Generator.
 
-Translates the parsed resource dictionary into valid Django models.py code.
+Generates models.py, serializers.py, views.py, and urls.py for a resource,
+as well as project configurations (settings.py, manage.py, root urls.py)
+to make the generated folder a fully runnable Django REST Framework app.
 """
 
-import os
 from pathlib import Path
+import os
 
 
 def generate_django_model(parsed_data: dict) -> str:
-    """Translate parsed DSL dictionary into Django models.py source code.
-
-    Args:
-        parsed_data: Dictionary representing the resource, e.g.:
-            {
-                "resource": "Product",
-                "fields": [{"name": "name", "type": "string"}]
-            }
-
-    Returns:
-        String of Python source code.
-    """
+    """Generate models.py content."""
     resource_name = parsed_data["resource"]
     fields = parsed_data["fields"]
 
-    # Generate the class header
     lines = [
         "from django.db import models",
         "",
@@ -32,23 +22,17 @@ def generate_django_model(parsed_data: dict) -> str:
         f"class {resource_name}(models.Model):",
     ]
 
-    # Generate each field line
     for field in fields:
         name = field["name"]
         field_type = field["type"]
-
         if field_type == "string":
             django_field = "models.CharField(max_length=255)"
         else:
             raise ValueError(f"Unsupported field type: '{field_type}'")
-
         lines.append(f"    {name} = {django_field}")
 
-    # Add spacing
     lines.append("")
 
-    # Generate __str__ method (good Django practice)
-    # We look for a 'name' field to print, or default to the first field
     str_field = "pk"
     field_names = [f["name"] for f in fields]
     if "name" in field_names:
@@ -65,15 +49,167 @@ def generate_django_model(parsed_data: dict) -> str:
     return "\n".join(lines)
 
 
-def write_generated_code(source_code: str, output_dir: str = "generated") -> str:
-    """Write generated Python code to generated/models.py.
+def generate_serializer(parsed_data: dict) -> str:
+    """Generate serializers.py content."""
+    resource_name = parsed_data["resource"]
 
-    Creates the output directory if it does not exist.
+    lines = [
+        "from rest_framework import serializers",
+        f"from .models import {resource_name}",
+        "",
+        "",
+        f"class {resource_name}Serializer(serializers.ModelSerializer):",
+        "    class Meta:",
+        f"        model = {resource_name}",
+        "        fields = '__all__'",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def generate_views(parsed_data: dict) -> str:
+    """Generate views.py content."""
+    resource_name = parsed_data["resource"]
+
+    lines = [
+        "from rest_framework import viewsets",
+        f"from .models import {resource_name}",
+        f"from .serializers import {resource_name}Serializer",
+        "",
+        "",
+        f"class {resource_name}ViewSet(viewsets.ModelViewSet):",
+        f"    queryset = {resource_name}.objects.all()",
+        f"    serializer_class = {resource_name}Serializer",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def generate_app_urls(parsed_data: dict) -> str:
+    """Generate app/urls.py routing content."""
+    resource_name = parsed_data["resource"]
+    route_name = resource_name.lower() + "s"  # simple pluralization
+
+    lines = [
+        "from django.urls import path, include",
+        "from rest_framework.routers import DefaultRouter",
+        f"from .views import {resource_name}ViewSet",
+        "",
+        "router = DefaultRouter()",
+        f"router.register(r'{route_name}', {resource_name}ViewSet, basename='{resource_name.lower()}')",
+        "",
+        "urlpatterns = [",
+        "    path('', include(router.urls)),",
+        "]",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def generate_project_settings() -> str:
+    """Generate settings.py configuration."""
+    return """import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
+SECRET_KEY = 'django-insecure-api-forge-project-secret-key'
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+
+INSTALLED_APPS = [
+    'django.contrib.contenttypes',
+    'django.contrib.auth',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'app',
+]
+
+MIDDLEWARE = [
+    'django.middleware.common.CommonMiddleware',
+]
+
+ROOT_URLCONF = 'urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+    },
+]
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+STATIC_URL = '/static/'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+"""
+
+
+def generate_project_urls() -> str:
+    """Generate root urls.py routing."""
+    return """from django.urls import path, include
+
+urlpatterns = [
+    path('api/', include('app.urls')),
+]
+"""
+
+
+def generate_manage_py() -> str:
+    """Generate manage.py entrypoint."""
+    return """#!/usr/bin/env python
+import os
+import sys
+
+def main():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
+    try:
+        from django.core.management import execute_from_command_line
+    except ImportError as exc:
+        raise ImportError(
+            "Couldn't import Django. Are you sure it's installed?"
+        ) from exc
+    execute_from_command_line(sys.argv)
+
+if __name__ == '__main__':
+    main()
+"""
+
+
+def write_generated_code(parsed_data: dict, output_dir: str = "generated") -> str:
+    """Write all project files to make a running Django Rest app.
+
+    Creates directories as needed.
     """
-    out_path = Path(output_dir)
-    out_path.mkdir(exist_ok=True)
+    project_path = Path(output_dir)
+    project_path.mkdir(exist_ok=True)
+    
+    app_path = project_path / "app"
+    app_path.mkdir(exist_ok=True)
 
-    file_path = out_path / "models.py"
-    file_path.write_text(source_code)
+    # 1. Create __init__.py inside app to make it a package
+    (app_path / "__init__.py").write_text("")
 
-    return str(file_path.absolute())
+    # 2. Write app-specific modules
+    (app_path / "models.py").write_text(generate_django_model(parsed_data))
+    (app_path / "serializers.py").write_text(generate_serializer(parsed_data))
+    (app_path / "views.py").write_text(generate_views(parsed_data))
+    (app_path / "urls.py").write_text(generate_app_urls(parsed_data))
+
+    # 3. Write project configs
+    (project_path / "settings.py").write_text(generate_project_settings())
+    (project_path / "urls.py").write_text(generate_project_urls())
+
+    # 4. Write manage.py and make it executable
+    manage_file = project_path / "manage.py"
+    manage_file.write_text(generate_manage_py())
+    os.chmod(manage_file, 0o755)
+
+    return str(project_path.absolute())
