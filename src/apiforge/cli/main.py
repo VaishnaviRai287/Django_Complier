@@ -107,3 +107,29 @@ def snapshot():
 
     # Output formatted JSON snapshot structure
     click.echo(json.dumps(snapshot_data, indent=4))
+
+
+@cli.command()
+@click.argument("file_path", type=click.Path(exists=True))
+def diff(file_path):
+    """Compare a .api file against the last compiled snapshot baseline."""
+    from apiforge.compiler.parser import parse_api_file
+    from apiforge.compiler.snapshot import load_snapshot
+    from apiforge.compiler.diff import compute_diff, format_diff
+
+    try:
+        # 1. Parse the new active spec file
+        new_schema = parse_api_file(file_path)
+
+        # 2. Load the baseline snapshot
+        old_schema = load_snapshot()
+        if old_schema is None:
+            click.echo("Error: No previous schema snapshot found. Run 'apiforge generate' first to establish a baseline.", err=True)
+            raise SystemExit(1)
+
+        # 3. Calculate and display modifications
+        changes = compute_diff(old_schema, new_schema)
+        click.echo(format_diff(changes))
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)

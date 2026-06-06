@@ -1,0 +1,7 @@
+resource Post {
+    title string
+    likes integer
+}
+resource Comment {
+    body string
+}
