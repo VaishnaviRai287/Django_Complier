@@ -198,6 +198,6 @@ class TestPlannerCLI:
         result = runner.invoke(cli, ["plan", str(api_file)])
         
         assert result.exit_code == 0
-        assert "Migration Plan:" in result.output
-        assert "AddResource(name='Role'" in result.output
-        assert "AddField(resource='User', name='age', type='integer')" in result.output
+        assert "Migration Plan" in result.output
+        assert "AddResource(Role)" in result.output
+        assert "AddField(User.age)" in result.output

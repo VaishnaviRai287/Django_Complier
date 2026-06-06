@@ -43,7 +43,7 @@ class TestDiffCalculation:
         new_schema = {
             "resources": [{
                 "resource": "NewModel",
-                "fields": [{"name": "id", "type": "integer"}]
+                "fields": [{"name": "name", "type": "string"}]
             }]
         }
 

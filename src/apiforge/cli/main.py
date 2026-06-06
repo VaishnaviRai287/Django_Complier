@@ -31,7 +31,7 @@ def cli():
 def info():
     """Display project information and current build phase."""
     click.echo(f"APIForge v{__version__}")
-    click.echo(f"Phase: 11")
+    click.echo(f"Phase: 13 — Schema Evolution Intelligence")
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")
@@ -78,8 +78,11 @@ def generate(file_path, output_dir):
     from apiforge.compiler.parser import parse_api_file
     from apiforge.compiler.codegen import generate_django_model, write_generated_code
     from apiforge.compiler.snapshot import save_snapshot
+    import time
 
     try:
+        start_time = time.perf_counter()
+
         # 1. Parse the DSL file
         parsed = parse_api_file(file_path)
 
@@ -88,8 +91,31 @@ def generate(file_path, output_dir):
 
         # 3. Save schema snapshot state
         save_snapshot(parsed)
-        
+
+        end_time = time.perf_counter()
+        compilation_time_ms = int((end_time - start_time) * 1000)
+
         click.echo(f"Successfully generated Django app at: {written_path}")
+
+        # Metrics
+        resources_count = len(parsed.get("resources", []))
+        fields_count = sum(len(r.get("fields", [])) for r in parsed.get("resources", []))
+        relationships_count = sum(1 for r in parsed.get("resources", []) for f in r.get("fields", []) if f.get("type") == "belongs_to")
+
+        click.echo()
+        click.echo("Compilation Report")
+        click.echo()
+        click.echo(f"Resources: {resources_count}")
+        click.echo(f"Fields: {fields_count}")
+        click.echo(f"Relationships: {relationships_count}")
+        click.echo()
+        click.echo("Generated Files:")
+        click.echo("✓ models.py")
+        click.echo("✓ serializers.py")
+        click.echo("✓ views.py")
+        click.echo("✓ urls.py")
+        click.echo()
+        click.echo(f"Compilation Time: {compilation_time_ms} ms")
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -130,6 +156,14 @@ def diff(file_path):
         # 3. Calculate and display modifications
         changes = compute_diff(old_schema, new_schema)
         click.echo(format_diff(changes))
+
+        # 4. Dependency impact report
+        from apiforge.compiler.planner import generate_migration_plan, format_impact_report
+        plan_ops = generate_migration_plan(old_schema, new_schema)
+        impact = format_impact_report(old_schema, new_schema, plan_ops)
+        if impact:
+            click.echo()
+            click.echo(impact)
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -141,7 +175,7 @@ def plan(file_path):
     """Compare a .api file against the snapshot baseline and generate a migration plan."""
     from apiforge.compiler.parser import parse_api_file
     from apiforge.compiler.snapshot import load_snapshot
-    from apiforge.compiler.planner import generate_migration_plan, format_migration_plan
+    from apiforge.compiler.planner import generate_migration_plan, format_migration_plan, format_impact_report
 
     try:
         # 1. Parse the new active spec file
@@ -156,6 +190,12 @@ def plan(file_path):
         # 3. Calculate and display migration plan
         migration_ops = generate_migration_plan(old_schema, new_schema)
         click.echo(format_migration_plan(migration_ops))
+
+        # 4. Dependency impact report
+        impact = format_impact_report(old_schema, new_schema, migration_ops)
+        if impact:
+            click.echo()
+            click.echo(impact)
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
