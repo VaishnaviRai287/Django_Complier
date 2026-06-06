@@ -31,7 +31,7 @@ def cli():
 def info():
     """Display project information and current build phase."""
     click.echo(f"APIForge v{__version__}")
-    click.echo(f"Phase: 8 — Schema Snapshots")
+    click.echo(f"Phase: 11")
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")
@@ -133,3 +133,38 @@ def diff(file_path):
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
+
+
+@cli.command()
+@click.argument("file_path", type=click.Path(exists=True))
+def plan(file_path):
+    """Compare a .api file against the snapshot baseline and generate a migration plan."""
+    from apiforge.compiler.parser import parse_api_file
+    from apiforge.compiler.snapshot import load_snapshot
+    from apiforge.compiler.planner import generate_migration_plan, format_migration_plan
+
+    try:
+        # 1. Parse the new active spec file
+        new_schema = parse_api_file(file_path)
+
+        # 2. Load the baseline snapshot
+        old_schema = load_snapshot()
+        if old_schema is None:
+            click.echo("Error: No previous schema snapshot found. Run 'apiforge generate' first to establish a baseline.", err=True)
+            raise SystemExit(1)
+
+        # 3. Calculate and display migration plan
+        migration_ops = generate_migration_plan(old_schema, new_schema)
+        click.echo(format_migration_plan(migration_ops))
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command()
+@click.argument("file_path", type=click.Path(exists=True))
+def watch(file_path):
+    """Monitor a .api file for live modifications and display evolution delta on save."""
+    from apiforge.compiler.watcher import watch_file
+
+    watch_file(file_path)
