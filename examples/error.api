@@ -1,1 +1,1 @@
-resource Product { name }
+resource product { name string }

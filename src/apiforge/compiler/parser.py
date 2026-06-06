@@ -9,6 +9,7 @@ from typing import List
 
 from apiforge.compiler.lexer import Lexer, Token, TokenType
 from apiforge.compiler.ast import ResourceNode, FieldNode
+from apiforge.compiler.semantic import SemanticAnalyzer
 
 
 class Parser:
@@ -107,7 +108,11 @@ def parse_api_file(file_path: str) -> dict:
     parser = Parser(tokens)
     ast_root = parser.parse()
 
-    # 3. Export AST using the compatibility bridge
+    # 3. Run Semantic Analysis Pass
+    analyzer = SemanticAnalyzer()
+    analyzer.analyze(ast_root)
+
+   # 4. Export AST using the compatibility bridge
     return ast_root.to_dict()
 
 
