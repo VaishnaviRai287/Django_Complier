@@ -272,24 +272,52 @@ The compiler scaffolds a standalone Django folder named `generated/` containing:
 
 Now, let's start the database and run the server.
 
-### Execute Django Database Initialization Commands
+### Execute Database Migrations
+
+From your root workspace directory, apply the database schema:
+
+```bash
+apiforge apply
+```
+
+#### Expected Output
+APIForge locates the generated project and runs migrations programmatically:
+
+```text
+Locating generated project at 'generated'...
+Running makemigrations...
+Migrations for 'app':
+  app/migrations/0001_initial.py
+    + Create model Product
+Running migrate...
+Operations to perform:
+  Apply all migrations: app, auth, contenttypes
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0001_initial... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying app.0001_initial... OK
+
+Migration successfully applied!
+```
+
+### Start the Server
 
 Navigate into the generated project folder:
 ```bash
 cd generated
 ```
-
-Initialize the database migration files:
-```bash
-python manage.py makemigrations app
-```
-*   **Why:** Compares your generated `models.py` against a blank database, generating a Django migration script (e.g. `0001_initial.py`) detailing the SQL instructions needed to create the tables.
-
-Execute migrations against SQLite:
-```bash
-python manage.py migrate
-```
-*   **Why:** Applies the migration instructions to build the physical SQLite database file `db.sqlite3`.
 
 Run the Django REST dev server:
 ```bash

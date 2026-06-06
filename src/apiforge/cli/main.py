@@ -31,7 +31,7 @@ def cli():
 def info():
     """Display project information and current build phase."""
     click.echo(f"APIForge v{__version__}")
-    click.echo(f"Phase: 13 — Schema Evolution Intelligence")
+    click.echo(f"Phase: 14 — Generate/Apply Workflow")
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")
@@ -86,10 +86,16 @@ def generate(file_path, output_dir):
         # 1. Parse the DSL file
         parsed = parse_api_file(file_path)
 
-        # 2. Write all project components to output directory
+        # 2. Load the baseline snapshot BEFORE saving the new one
+        from apiforge.compiler.snapshot import load_snapshot
+        old_schema = load_snapshot()
+        if old_schema is None:
+            old_schema = {"resources": []}
+
+        # 3. Write all project components to output directory
         written_path = write_generated_code(parsed, output_dir)
 
-        # 3. Save schema snapshot state
+        # 4. Save schema snapshot state
         save_snapshot(parsed)
 
         end_time = time.perf_counter()
@@ -116,6 +122,33 @@ def generate(file_path, output_dir):
         click.echo("✓ urls.py")
         click.echo()
         click.echo(f"Compilation Time: {compilation_time_ms} ms")
+
+        # 5. Compute diff, risk analysis, and migration plan
+        from apiforge.compiler.planner import generate_migration_plan
+        plan_ops = generate_migration_plan(old_schema, parsed)
+
+        # Find highest risk level
+        highest_risk = "SAFE"
+        for op in plan_ops:
+            risk = op.get_risk()
+            if risk == "DESTRUCTIVE":
+                highest_risk = "DESTRUCTIVE"
+                break
+            elif risk == "WARNING":
+                highest_risk = "WARNING"
+
+        click.echo()
+        if highest_risk == "DESTRUCTIVE":
+            click.echo("Data loss possible.")
+            click.echo("Review manually before applying.")
+        elif highest_risk == "WARNING":
+            click.echo("Potential precision loss detected.")
+            click.echo("Review generated migration before applying.")
+        else:
+            click.echo("Safe migration detected.")
+            click.echo("You may run:")
+            click.echo()
+            click.echo("  apiforge apply")
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -208,3 +241,60 @@ def watch(file_path):
     from apiforge.compiler.watcher import watch_file
 
     watch_file(file_path)
+
+
+@cli.command()
+@click.option(
+    "--dir",
+    "-d",
+    default="generated",
+    help="Directory containing the generated Django project."
+)
+def apply(dir):
+    """Locate the generated Django project and execute migrations."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    manage_py = Path(dir) / "manage.py"
+    if not manage_py.exists():
+        click.echo(f"Error: Could not locate generated Django project at '{dir}'. Run 'apiforge generate' first.", err=True)
+        raise SystemExit(1)
+
+    click.echo(f"Locating generated project at '{dir}'...")
+
+    # 1. Run makemigrations
+    click.echo("Running makemigrations...")
+    result_make = subprocess.run(
+        [sys.executable, "manage.py", "makemigrations", "app", "--noinput"],
+        cwd=dir,
+        capture_output=True,
+        text=True
+    )
+
+    if result_make.returncode != 0:
+        click.echo("Error: makemigrations failed.", err=True)
+        click.echo(result_make.stderr, err=True)
+        click.echo(result_make.stdout, err=True)
+        raise SystemExit(1)
+
+    click.echo(result_make.stdout.strip())
+
+    # 2. Run migrate
+    click.echo("Running migrate...")
+    result_migrate = subprocess.run(
+        [sys.executable, "manage.py", "migrate", "--noinput"],
+        cwd=dir,
+        capture_output=True,
+        text=True
+    )
+
+    if result_migrate.returncode != 0:
+        click.echo("Error: migrate failed.", err=True)
+        click.echo(result_migrate.stderr, err=True)
+        click.echo(result_migrate.stdout, err=True)
+        raise SystemExit(1)
+
+    click.echo(result_migrate.stdout.strip())
+    click.echo()
+    click.echo("Migration successfully applied!")

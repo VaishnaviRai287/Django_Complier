@@ -78,8 +78,12 @@ Parses a `.api` specification and outputs its AST dictionary structure in JSON f
 *   **Example:** `apiforge parse examples/product.api`
 
 ### `apiforge generate <file_path> [--output-dir <dir>]`
-Compiles a `.api` layout into a fully configured Django backend, establishes/saves the schema snapshot, and prints a Compilation Report summary.
+Compiles a `.api` layout into a fully configured Django backend, establishes/saves the schema snapshot, and prints a Compilation Report summary with a recommended next step based on evolution risks.
 *   **Example:** `apiforge generate examples/product.api -o generated`
+
+### `apiforge apply [--dir <dir>]`
+Locates the generated Django project, runs database migrations (`makemigrations` and `migrate`), and reports success/failure metrics.
+*   **Example:** `apiforge apply`
 
 ### `apiforge snapshot`
 Loads and outputs the active persistent schema snapshot cached inside `.apiforge/schema.json` to console.
@@ -145,11 +149,13 @@ Compilation Time: 2 ms
 ```
 
 ### Step 3: Run the Compiled Backend
-Navigate into the generated project, run Django's native database migrations, and boot the server:
+Apply database migrations using APIForge, navigate into the generated directory, and boot the server:
 ```bash
+# Run migrations on the generated Django project
+apiforge apply
+
+# Navigate and start server
 cd generated/
-python manage.py makemigrations app
-python manage.py migrate
 python manage.py runserver
 ```
 Visit `http://127.0.0.1:8000/api/` in your browser to interact with the Django REST Framework browsable API!
