@@ -1,34 +1,93 @@
 """
-Phase 1 — Simple Resource Parser.
+Phase 5 — LL(1) Recursive Descent Parser.
 
-Reads a .api file and extracts resource definitions using regex.
-This is intentionally simple — no lexer, no AST, no tokens.
-Phase 5 will replace this with proper compiler components.
-
-Why regex for now?
-- We only support ONE resource with simple fields
-- Regex is good enough for this limited scope
-- Building a full lexer/parser before we need one is over-engineering
-- We'll feel the pain of regex in Phase 4-5, and THEN we'll refactor
+Parses a stream of Lexer tokens into a type-safe AST representation.
 """
 
-import json
-import re
 from pathlib import Path
+from typing import List
+
+from apiforge.compiler.lexer import Lexer, Token, TokenType
+from apiforge.compiler.ast import ResourceNode, FieldNode
+
+
+class Parser:
+    """Parses a list of Tokens into an AST representation using LL(1) logic."""
+
+    def __init__(self, tokens: List[Token]):
+        self.tokens = tokens
+        self.current = 0
+
+    def _peek(self) -> Token:
+        """Inspect the current token without consuming it."""
+        return self.tokens[self.current]
+
+    def _previous(self) -> Token:
+        """Return the token just consumed."""
+        return self.tokens[self.current - 1]
+
+    def _is_at_end(self) -> bool:
+        """Check if parser has reached the end of the token stream."""
+        return self._peek().type == TokenType.EOF
+
+    def _advance(self) -> Token:
+        """Consume and return the current token, advancing the pointer."""
+        if not self._is_at_end():
+            self.current += 1
+        return self._previous()
+
+    def _check(self, type_: TokenType) -> bool:
+        """Check if the current token matches the expected type."""
+        if self._is_at_end():
+            return False
+        return self._peek().type == type_
+
+    def _consume(self, type_: TokenType, error_message: str) -> Token:
+        """Assert the current token matches type, consume it, or throw SyntaxError."""
+        if self._check(type_):
+            return self._advance()
+        
+        token = self._peek()
+        raise ValueError(f"Syntax error on line {token.line}: {error_message} (Got: '{token.value}')")
+
+    def parse(self) -> ResourceNode:
+        """Parse token stream based on DSL grammar rule: Resource -> 'resource' ID '{' Field* '}'."""
+        # 1. Match keyword 'resource'
+        resource_token = self._consume(TokenType.RESOURCE, "Expected keyword 'resource'")
+        
+        # 2. Match resource identifier name
+        name_token = self._consume(TokenType.IDENTIFIER, "Expected resource identifier name")
+        
+        # 3. Match opening brace
+        self._consume(TokenType.LBRACE, "Expected '{' to start resource body")
+
+        # 4. Parse field declarations until closing brace or EOF
+        fields = []
+        while not self._check(TokenType.RBRACE) and not self._is_at_end():
+            fields.append(self._parse_field())
+
+        # 5. Match closing brace
+        self._consume(TokenType.RBRACE, "Expected '}' to close resource body")
+
+        # Return root AST Node
+        return ResourceNode(name_token.value, fields, resource_token.line)
+
+    def _parse_field(self) -> FieldNode:
+        """Parse field declaration based on DSL grammar rule: Field -> ID ID."""
+        name_token = self._consume(TokenType.IDENTIFIER, "Expected field name identifier")
+        type_token = self._consume(TokenType.IDENTIFIER, "Expected field type identifier")
+        
+        return FieldNode(name_token.value, type_token.value, name_token.line)
 
 
 def parse_api_file(file_path: str) -> dict:
-    """Parse a .api file and return a dictionary representation.
+    """Parse a .api file and return its dictionary representation for backend codegen.
 
     Args:
-        file_path: Path to the .api file to parse.
+        file_path: Path to the .api file.
 
     Returns:
-        Dictionary with 'resource' name and 'fields' list.
-
-    Raises:
-        FileNotFoundError: If the file doesn't exist.
-        ValueError: If the file format is invalid.
+        Compatible dictionary with 'resource' name and 'fields' list.
     """
     path = Path(file_path)
 
@@ -38,54 +97,22 @@ def parse_api_file(file_path: str) -> dict:
     if not path.suffix == ".api":
         raise ValueError(f"Expected .api file, got: {path.suffix}")
 
-    content = path.read_text().strip()
+    content = path.read_text()
 
-    # Match: resource ResourceName { ... }
-    resource_match = re.match(
-        r"resource\s+(\w+)\s*\{(.+?)\}",
-        content,
-        re.DOTALL,
-    )
+    # 1. Run Lexical Analysis
+    lexer = Lexer(content)
+    tokens = lexer.tokenize()
 
-    if not resource_match:
-        raise ValueError(
-            f"Invalid format. Expected: resource Name {{ field type }}\n"
-            f"Got: {content[:100]}"
-        )
+    # 2. Run Syntax Analysis
+    parser = Parser(tokens)
+    ast_root = parser.parse()
 
-    resource_name = resource_match.group(1)
-    fields_block = resource_match.group(2).strip()
-
-    # Parse each line inside the braces as: field_name field_type
-    fields = []
-    for line in fields_block.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-
-        parts = line.split()
-        if len(parts) != 2:
-            raise ValueError(
-                f"Invalid field definition: '{line}'\n"
-                f"Expected: field_name field_type"
-            )
-
-        fields.append({
-            "name": parts[0],
-            "type": parts[1],
-        })
-
-    return {
-        "resource": resource_name,
-        "fields": fields,
-    }
+    # 3. Export AST using the compatibility bridge
+    return ast_root.to_dict()
 
 
 def parse_to_json(file_path: str) -> str:
-    """Parse a .api file and return formatted JSON string.
-
-    This is a convenience wrapper around parse_api_file()
-    for CLI output.
-    """
+    """Parse a .api file and return formatted JSON string for CLI compatibility."""
+    import json
     result = parse_api_file(file_path)
     return json.dumps(result, indent=4)

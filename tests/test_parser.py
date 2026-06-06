@@ -78,7 +78,7 @@ class TestParseErrors:
         api_file = tmp_path / "bad.api"
         api_file.write_text("this is not valid")
 
-        with pytest.raises(ValueError, match="Invalid format"):
+        with pytest.raises(ValueError, match="Syntax error"):
             parse_api_file(str(api_file))
 
     def test_invalid_field_definition(self, tmp_path):
@@ -86,7 +86,7 @@ class TestParseErrors:
         api_file = tmp_path / "bad_field.api"
         api_file.write_text("resource X {\n    just_one_word\n}\n")
 
-        with pytest.raises(ValueError, match="Invalid field definition"):
+        with pytest.raises(ValueError, match="Syntax error"):
             parse_api_file(str(api_file))
 
 
