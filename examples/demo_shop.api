@@ -1,0 +1,8 @@
+resource Customer {
+    name string
+    email email
+}
+resource Order {
+    customer belongs_to Customer
+    price decimal
+}

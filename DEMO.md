@@ -305,6 +305,16 @@ Starting development server at http://127.0.0.1:8000/
 Quit the server with CONTROL-C.
 ```
 
+### Exploring the Browsable API in the Browser
+
+Open your web browser and navigate to:
+`http://127.0.0.1:8000/api/`
+
+By default, the page displays the **Api Root** directory. 
+*   **Verify Endpoint Links:** If you see parser/renderer metadata instead of resource links, click the blue **`GET`** dropdown next to the `OPTIONS` button to pull the standard JSON directory, which lists the `"products"` path.
+*   **Navigate to Resource View:** Click the `"products"` link or navigate to `http://127.0.0.1:8000/api/products/`.
+*   **Submit Forms directly:** Scroll to the bottom of the `/api/products/` screen. You will see a styled HTML input form. Enter values for `name` and `price`, then click **`POST`** to create a product record directly in the database without writing curl commands!
+
 ---
 
 ## SECTION 6 — TEST THE GENERATED API
