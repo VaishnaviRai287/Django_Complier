@@ -23,7 +23,6 @@ Whether you are here to learn how to use the compiler, build a new backend proje
 14. [Section 13 — Live Hot-Reloading Watch Mode](#section-13--watch-mode)
 15. [Section 14 — APIForge vs. Writing Django Manually](#section-14--how-this-compares-to-django)
 16. [Section 15 — Internal Compiler Architecture](#section-15--internal-compiler-architecture)
-17. [Section 16 — Technical Interview Walkthrough](#section-16--interview-walkthrough)
 
 ---
 
@@ -780,17 +779,4 @@ APIForge compiles files through a structured pipeline:
 *   **Diff Engine:** Computes additions, deletions, renames, and type updates.
 *   **Migration Planner:** Runs type coercion analysis, evaluates risks, and traverses relational cascades.
 
----
 
-## SECTION 16 — INTERVIEW WALKTHROUGH
-
-Here is a 5-minute explanation pitch you can use in interviews or technical presentations to explain APIForge:
-
-### The Elevator Pitch
-> "APIForge is an incremental API compiler and schema evolution engine that compiles a custom, declarative DSL into production-ready Django REST Framework backends. It automates API scaffolding and database migrations, using name/type similarity heuristics and relationship cascade graph traversals to evaluate migration risks and protect against data loss."
-
-### Core Architectural talking points:
-1.  **Strict Compiler Pass Modularity:** The frontend is implemented as a formal LL(1) recursive descent parser that validates DSL syntax into a strict, type-safe Abstract Syntax Tree (AST), separated from code generation passes using a serialization bridge.
-2.  **Stateful Incremental Diffs:** By caching schema baseline snapshots, the compiler behaves statefully. Subsequent compilation runs compute precise structural differences, detecting field renames, resource renames, and type updates.
-3.  **Heuristic Rename & Type Coercion Matching:** Instead of treating renames as destructive drops and adds (which causes database data loss), the diff engine matches them using weighted SequenceMatcher ratios, relative coordinates, and type compatibility.
-4.  **Relational Cascades Validation:** When a parent resource changes, the compiler constructs a directed graph of relationships and runs BFS along foreign keys to identify all downstream resources and component code files that require rebuilds.
