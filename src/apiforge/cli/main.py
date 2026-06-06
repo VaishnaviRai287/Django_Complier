@@ -31,7 +31,7 @@ def cli():
 def info():
     """Display project information and current build phase."""
     click.echo(f"APIForge v{__version__}")
-    click.echo(f"Phase: 4 — Support More Field Types")
+    click.echo(f"Phase: 8 — Schema Snapshots")
     click.echo(f"Status: CLI operational")
     click.echo()
     click.echo("Run 'apiforge --help' to see available commands.")
@@ -77,6 +77,7 @@ def generate(file_path, output_dir):
     """
     from apiforge.compiler.parser import parse_api_file
     from apiforge.compiler.codegen import generate_django_model, write_generated_code
+    from apiforge.compiler.snapshot import save_snapshot
 
     try:
         # 1. Parse the DSL file
@@ -84,8 +85,25 @@ def generate(file_path, output_dir):
 
         # 2. Write all project components to output directory
         written_path = write_generated_code(parsed, output_dir)
+
+        # 3. Save schema snapshot state
+        save_snapshot(parsed)
         
         click.echo(f"Successfully generated Django app at: {written_path}")
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
+
+@cli.command()
+def snapshot():
+    """Display the last compiled schema snapshot from disk."""
+    import json
+    from apiforge.compiler.snapshot import load_snapshot
+
+    snapshot_data = load_snapshot()
+    if snapshot_data is None:
+        click.echo("Error: No schema snapshot found. Run 'apiforge generate' first.", err=True)
+        raise SystemExit(1)
+
+    # Output formatted JSON snapshot structure
+    click.echo(json.dumps(snapshot_data, indent=4))
