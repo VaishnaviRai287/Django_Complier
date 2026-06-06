@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 
 from apiforge.compiler.lexer import Lexer, Token, TokenType
-from apiforge.compiler.ast import ResourceNode, FieldNode
+from apiforge.compiler.ast import ResourceNode, FieldNode, SchemaNode
 from apiforge.compiler.semantic import SemanticAnalyzer
 
 
@@ -51,33 +51,36 @@ class Parser:
         token = self._peek()
         raise ValueError(f"Syntax error on line {token.line}: {error_message} (Got: '{token.value}')")
 
-    def parse(self) -> ResourceNode:
-        """Parse token stream based on DSL grammar rule: Resource -> 'resource' ID '{' Field* '}'."""
-        # 1. Match keyword 'resource'
+    def parse(self) -> SchemaNode:
+        """Parse the token stream into a SchemaNode AST."""
+        resources = []
+        while not self._is_at_end():
+            resources.append(self._parse_resource())
+        return SchemaNode(resources)
+
+    def _parse_resource(self) -> ResourceNode:
+        """Parse a single resource declaration: 'resource Name { ... }'."""
         resource_token = self._consume(TokenType.RESOURCE, "Expected keyword 'resource'")
-        
-        # 2. Match resource identifier name
         name_token = self._consume(TokenType.IDENTIFIER, "Expected resource identifier name")
-        
-        # 3. Match opening brace
         self._consume(TokenType.LBRACE, "Expected '{' to start resource body")
 
-        # 4. Parse field declarations until closing brace or EOF
         fields = []
         while not self._check(TokenType.RBRACE) and not self._is_at_end():
             fields.append(self._parse_field())
 
-        # 5. Match closing brace
         self._consume(TokenType.RBRACE, "Expected '}' to close resource body")
-
-        # Return root AST Node
         return ResourceNode(name_token.value, fields, resource_token.line)
 
     def _parse_field(self) -> FieldNode:
-        """Parse field declaration based on DSL grammar rule: Field -> ID ID."""
+        """Parse a single field or relation definition."""
         name_token = self._consume(TokenType.IDENTIFIER, "Expected field name identifier")
-        type_token = self._consume(TokenType.IDENTIFIER, "Expected field type identifier")
         
+        if self._check(TokenType.BELONGS_TO):
+            self._advance()  # consume belongs_to
+            target_token = self._consume(TokenType.IDENTIFIER, "Expected relation target identifier name")
+            return FieldNode(name_token.value, "belongs_to", name_token.line, target=target_token.value)
+        
+        type_token = self._consume(TokenType.IDENTIFIER, "Expected field type identifier")
         return FieldNode(name_token.value, type_token.value, name_token.line)
 
 

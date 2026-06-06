@@ -20,8 +20,10 @@ class TestGenerateDjangoComponents:
     @pytest.fixture
     def mock_data(self):
         return {
-            "resource": "Product",
-            "fields": [{"name": "name", "type": "string"}]
+            "resources": [{
+                "resource": "Product",
+                "fields": [{"name": "name", "type": "string"}]
+            }]
         }
 
     def test_generates_model(self, mock_data):
@@ -51,14 +53,16 @@ class TestGenerateDjangoComponents:
     def test_generates_all_supported_field_types(self):
         """Should correctly translate all 5 primary DSL types to Django fields."""
         parsed_data = {
-            "resource": "Customer",
-            "fields": [
-                {"name": "fullname", "type": "string"},
-                {"name": "age", "type": "integer"},
-                {"name": "balance", "type": "decimal"},
-                {"name": "is_active", "type": "boolean"},
-                {"name": "contact_email", "type": "email"},
-            ]
+            "resources": [{
+                "resource": "Customer",
+                "fields": [
+                    {"name": "fullname", "type": "string"},
+                    {"name": "age", "type": "integer"},
+                    {"name": "balance", "type": "decimal"},
+                    {"name": "is_active", "type": "boolean"},
+                    {"name": "contact_email", "type": "email"},
+                ]
+            }]
         }
 
         code = generate_django_model(parsed_data)
@@ -72,11 +76,13 @@ class TestGenerateDjangoComponents:
     def test_str_method_prefers_email_if_no_name(self):
         """If there is no 'name' field, but there is an 'email', it should print it."""
         parsed_data = {
-            "resource": "User",
-            "fields": [
-                {"name": "age", "type": "integer"},
-                {"name": "email", "type": "email"},
-            ]
+            "resources": [{
+                "resource": "User",
+                "fields": [
+                    {"name": "age", "type": "integer"},
+                    {"name": "email", "type": "email"},
+                ]
+            }]
         }
 
         code = generate_django_model(parsed_data)
@@ -89,8 +95,10 @@ class TestWriteGeneratedProject:
 
     def test_creates_django_project_structure(self, tmp_path):
         mock_data = {
-            "resource": "Product",
-            "fields": [{"name": "name", "type": "string"}]
+            "resources": [{
+                "resource": "Product",
+                "fields": [{"name": "name", "type": "string"}]
+            }]
         }
         
         project_dir = tmp_path / "django_project"

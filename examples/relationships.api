@@ -1,0 +1,7 @@
+resource User {
+    username string
+}
+resource Post {
+    author belongs_to User
+    title string
+}

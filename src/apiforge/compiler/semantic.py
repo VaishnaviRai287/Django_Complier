@@ -6,19 +6,27 @@ duplicate definitions, and type correctness prior to backend generation.
 """
 
 import difflib
-from apiforge.compiler.ast import ResourceNode
+from apiforge.compiler.ast import SchemaNode, ResourceNode
 
-VALID_TYPES = {"string", "integer", "decimal", "boolean", "email"}
+VALID_TYPES = {"string", "integer", "decimal", "boolean", "email", "belongs_to"}
 
 
 class SemanticAnalyzer:
     """Analyzes AST nodes to enforce semantic rules of the DSL."""
 
-    def analyze(self, resource: ResourceNode) -> None:
-        """Run all semantic analysis rules against the parsed resource AST node."""
-        self._validate_resource_name(resource)
-        self._validate_empty_resource(resource)
-        self._validate_fields(resource)
+    def analyze(self, schema) -> None:
+        """Run semantic analysis across all resources in the schema."""
+        if isinstance(schema, ResourceNode):
+            resources = [schema]
+        else:
+            resources = schema.resources
+
+        defined_resources = {r.name for r in resources}
+
+        for resource in resources:
+            self._validate_resource_name(resource)
+            self._validate_empty_resource(resource)
+            self._validate_fields(resource, defined_resources)
 
     def _validate_resource_name(self, resource: ResourceNode) -> None:
         """Enforce that resource names start with an uppercase letter."""
@@ -36,7 +44,7 @@ class SemanticAnalyzer:
                 f"Resource '{resource.name}' must define at least one field."
             )
 
-    def _validate_fields(self, resource: ResourceNode) -> None:
+    def _validate_fields(self, resource: ResourceNode, defined_resources: set) -> None:
         """Enforce field type checking, casing, and uniqueness constraint checks."""
         seen_fields = set()
 
@@ -63,4 +71,11 @@ class SemanticAnalyzer:
                 raise ValueError(
                     f"Semantic error on line {field.line}: "
                     f"Unknown type '{field.type}'.{suggestion}"
+                )
+
+            # 4. Referential Integrity validation check
+            if field.type == "belongs_to" and field.target not in defined_resources:
+                raise ValueError(
+                    f"Semantic error on line {field.line}: "
+                    f"Unknown relation target '{field.target}'."
                 )

@@ -1,9 +1,8 @@
 """
-Phase 3 — Django App Code Generator.
+Phase 7 — Relational Django App Code Generator.
 
-Generates models.py, serializers.py, views.py, and urls.py for a resource,
-as well as project configurations (settings.py, manage.py, root urls.py)
-to make the generated folder a fully runnable Django REST Framework app.
+Generates models.py, serializers.py, views.py, and urls.py for a multi-resource schema,
+mapping belongs_to fields to models.ForeignKey relations.
 """
 
 from pathlib import Path
@@ -11,18 +10,13 @@ import os
 
 
 def generate_django_model(parsed_data: dict) -> str:
-    """Generate models.py content."""
-    resource_name = parsed_data["resource"]
-    fields = parsed_data["fields"]
-
+    """Generate models.py content for all resources in the schema."""
     lines = [
         "from django.db import models",
         "",
         "",
-        f"class {resource_name}(models.Model):",
     ]
 
-    # Map DSL types to Django field declarations
     type_map = {
         "string": "models.CharField(max_length=255)",
         "integer": "models.IntegerField()",
@@ -31,100 +25,131 @@ def generate_django_model(parsed_data: dict) -> str:
         "email": "models.EmailField()",
     }
 
-    for field in fields:
-        name = field["name"]
-        field_type = field["type"]
+    for resource in parsed_data["resources"]:
+        resource_name = resource["resource"]
+        fields = resource["fields"]
 
-        if field_type in type_map:
-            django_field = type_map[field_type]
+        lines.extend([
+            f"class {resource_name}(models.Model):",
+        ])
+
+        for field in fields:
+            name = field["name"]
+            field_type = field["type"]
+
+            if field_type == "belongs_to":
+                target = field["target"]
+                django_field = f"models.ForeignKey('{target}', on_delete=models.CASCADE)"
+            elif field_type in type_map:
+                django_field = type_map[field_type]
+            else:
+                raise ValueError(f"Unsupported field type: '{field_type}'")
+
+            lines.append(f"    {name} = {django_field}")
+
+        lines.append("")
+
+        # Choose str representing field
+        str_field = "pk"
+        field_names = [f["name"] for f in fields]
+        field_types = {f["name"]: f["type"] for f in fields}
+
+        if "name" in field_names:
+            str_field = "name"
+        elif "email" in field_names:
+            str_field = "email"
         else:
-            raise ValueError(f"Unsupported field type: '{field_type}'")
+            for name, ftype in field_types.items():
+                if ftype in ("string", "email"):
+                    str_field = name
+                    break
 
-        lines.append(f"    {name} = {django_field}")
+        lines.extend([
+            "    def __str__(self):",
+            f"        return str(self.{str_field})",
+            "",
+            "",
+        ])
 
-    lines.append("")
-
-    # Automatically choose the best __str__ field
-    # We prefer 'name', then 'email', then the first string field, defaulting to 'pk'
-    str_field = "pk"
-    field_names = [f["name"] for f in fields]
-    field_types = {f["name"]: f["type"] for f in fields}
-
-    if "name" in field_names:
-        str_field = "name"
-    elif "email" in field_names:
-        str_field = "email"
-    else:
-        # Fallback to the first string/email field
-        for name, ftype in field_types.items():
-            if ftype in ("string", "email"):
-                str_field = name
-                break
-
-    lines.extend([
-        "    def __str__(self):",
-        f"        return str(self.{str_field})",
-        "",
-    ])
-
-    return "\n".join(lines)
+    return "\n".join(lines).strip() + "\n"
 
 
 def generate_serializer(parsed_data: dict) -> str:
-    """Generate serializers.py content."""
-    resource_name = parsed_data["resource"]
-
+    """Generate serializers.py content for all resources."""
     lines = [
         "from rest_framework import serializers",
-        f"from .models import {resource_name}",
-        "",
-        "",
-        f"class {resource_name}Serializer(serializers.ModelSerializer):",
-        "    class Meta:",
-        f"        model = {resource_name}",
-        "        fields = '__all__'",
-        "",
     ]
-    return "\n".join(lines)
+
+    models = [r["resource"] for r in parsed_data["resources"]]
+    lines.append(f"from .models import {', '.join(models)}")
+    lines.append("")
+
+    for resource in parsed_data["resources"]:
+        resource_name = resource["resource"]
+        lines.extend([
+            "",
+            f"class {resource_name}Serializer(serializers.ModelSerializer):",
+            "    class Meta:",
+            f"        model = {resource_name}",
+            "        fields = '__all__'",
+        ])
+
+    return "\n".join(lines).strip() + "\n"
 
 
 def generate_views(parsed_data: dict) -> str:
-    """Generate views.py content."""
-    resource_name = parsed_data["resource"]
-
+    """Generate views.py content for all resources."""
     lines = [
         "from rest_framework import viewsets",
-        f"from .models import {resource_name}",
-        f"from .serializers import {resource_name}Serializer",
-        "",
-        "",
-        f"class {resource_name}ViewSet(viewsets.ModelViewSet):",
-        f"    queryset = {resource_name}.objects.all()",
-        f"    serializer_class = {resource_name}Serializer",
-        "",
     ]
-    return "\n".join(lines)
+
+    models = [r["resource"] for r in parsed_data["resources"]]
+    lines.append(f"from .models import {', '.join(models)}")
+    lines.append(f"from .serializers import {', '.join(f'{m}Serializer' for m in models)}")
+    lines.append("")
+
+    for resource in parsed_data["resources"]:
+        resource_name = resource["resource"]
+        lines.extend([
+            "",
+            f"class {resource_name}ViewSet(viewsets.ModelViewSet):",
+            f"    queryset = {resource_name}.objects.all()",
+            f"    serializer_class = {resource_name}Serializer",
+        ])
+
+    return "\n".join(lines).strip() + "\n"
 
 
 def generate_app_urls(parsed_data: dict) -> str:
-    """Generate app/urls.py routing content."""
-    resource_name = parsed_data["resource"]
-    route_name = resource_name.lower() + "s"  # simple pluralization
-
+    """Generate app/urls.py routing for all resources."""
     lines = [
         "from django.urls import path, include",
         "from rest_framework.routers import DefaultRouter",
-        f"from .views import {resource_name}ViewSet",
+    ]
+
+    models = [r["resource"] for r in parsed_data["resources"]]
+    imports = ", ".join(f"{m}ViewSet" for m in models)
+    lines.extend([
+        f"from .views import {imports}",
         "",
         "router = DefaultRouter()",
-        f"router.register(r'{route_name}', {resource_name}ViewSet, basename='{resource_name.lower()}')",
+    ])
+
+    for resource in parsed_data["resources"]:
+        resource_name = resource["resource"]
+        route_name = resource_name.lower() + "s"
+        lines.append(
+            f"router.register(r'{route_name}', {resource_name}ViewSet, basename='{resource_name.lower()}')"
+        )
+
+    lines.extend([
         "",
         "urlpatterns = [",
         "    path('', include(router.urls)),",
         "]",
-        "",
-    ]
-    return "\n".join(lines)
+    ])
+
+    return "\n".join(lines).strip() + "\n"
 
 
 def generate_project_settings() -> str:
@@ -205,30 +230,23 @@ if __name__ == '__main__':
 
 
 def write_generated_code(parsed_data: dict, output_dir: str = "generated") -> str:
-    """Write all project files to make a running Django Rest app.
-
-    Creates directories as needed.
-    """
+    """Write all project files to make a running Django REST app."""
     project_path = Path(output_dir)
     project_path.mkdir(exist_ok=True)
     
     app_path = project_path / "app"
     app_path.mkdir(exist_ok=True)
 
-    # 1. Create __init__.py inside app to make it a package
     (app_path / "__init__.py").write_text("")
 
-    # 2. Write app-specific modules
     (app_path / "models.py").write_text(generate_django_model(parsed_data))
     (app_path / "serializers.py").write_text(generate_serializer(parsed_data))
     (app_path / "views.py").write_text(generate_views(parsed_data))
     (app_path / "urls.py").write_text(generate_app_urls(parsed_data))
 
-    # 3. Write project configs
     (project_path / "settings.py").write_text(generate_project_settings())
     (project_path / "urls.py").write_text(generate_project_urls())
 
-    # 4. Write manage.py and make it executable
     manage_file = project_path / "manage.py"
     manage_file.write_text(generate_manage_py())
     os.chmod(manage_file, 0o755)

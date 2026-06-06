@@ -20,10 +20,10 @@ class TestParseApiFile:
 
         result = parse_api_file(str(api_file))
 
-        assert result["resource"] == "Product"
-        assert len(result["fields"]) == 1
-        assert result["fields"][0]["name"] == "name"
-        assert result["fields"][0]["type"] == "string"
+        assert result["resources"][0]["resource"] == "Product"
+        assert len(result["resources"][0]["fields"]) == 1
+        assert result["resources"][0]["fields"][0]["name"] == "name"
+        assert result["resources"][0]["fields"][0]["type"] == "string"
 
     def test_parses_multiple_fields(self, tmp_path):
         """A resource can have more than one field."""
@@ -37,10 +37,10 @@ class TestParseApiFile:
 
         result = parse_api_file(str(api_file))
 
-        assert result["resource"] == "User"
-        assert len(result["fields"]) == 2
-        assert result["fields"][0]["name"] == "username"
-        assert result["fields"][1]["name"] == "email"
+        assert result["resources"][0]["resource"] == "User"
+        assert len(result["resources"][0]["fields"]) == 2
+        assert result["resources"][0]["fields"][0]["name"] == "username"
+        assert result["resources"][0]["fields"][1]["name"] == "email"
 
     def test_handles_extra_whitespace(self, tmp_path):
         """Parser should handle inconsistent spacing."""
@@ -53,8 +53,8 @@ class TestParseApiFile:
 
         result = parse_api_file(str(api_file))
 
-        assert result["resource"] == "Item"
-        assert result["fields"][0]["name"] == "price"
+        assert result["resources"][0]["resource"] == "Item"
+        assert result["resources"][0]["fields"][0]["name"] == "price"
 
 
 class TestParseErrors:
@@ -101,5 +101,5 @@ class TestParseToJson:
         json_output = parse_to_json(str(api_file))
         parsed = json.loads(json_output)
 
-        assert parsed["resource"] == "Product"
-        assert len(parsed["fields"]) == 1
+        assert parsed["resources"][0]["resource"] == "Product"
+        assert len(parsed["resources"][0]["fields"]) == 1

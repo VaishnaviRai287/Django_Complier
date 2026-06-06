@@ -13,6 +13,7 @@ class TokenType(Enum):
     IDENTIFIER = auto()   # Resource/field names and types
     LBRACE = auto()       # '{'
     RBRACE = auto()       # '}'
+    BELONGS_TO = auto()   # Keyword 'belongs_to'
     EOF = auto()          # End of file marker
 
 
@@ -88,6 +89,8 @@ class Lexer:
                 # Distinguish DSL keywords from standard user-defined identifiers
                 if word == "resource":
                     tokens.append(Token(TokenType.RESOURCE, word, start_line))
+                elif word == "belongs_to":
+                    tokens.append(Token(TokenType.BELONGS_TO, word, start_line))
                 else:
                     tokens.append(Token(TokenType.IDENTIFIER, word, start_line))
                 continue

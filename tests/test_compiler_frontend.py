@@ -71,7 +71,7 @@ class TestIntegrationFrontend:
 
         result = parse_api_file(str(api_file))
 
-        assert result["resource"] == "Item"
-        assert len(result["fields"]) == 2
-        assert result["fields"][0] == {"name": "id", "type": "integer"}
-        assert result["fields"][1] == {"name": "title", "type": "string"}
+        assert result["resources"][0]["resource"] == "Item"
+        assert len(result["resources"][0]["fields"]) == 2
+        assert result["resources"][0]["fields"][0] == {"name": "id", "type": "integer"}
+        assert result["resources"][0]["fields"][1] == {"name": "title", "type": "string"}
